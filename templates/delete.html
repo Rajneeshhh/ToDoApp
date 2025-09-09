@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Delete Task</title>
+</head>
+<body>
+    <h1>Delete Task</h1>
+
+    <form id="deleteTaskForm">
+        <label>Task ID: <input type="number" name="task_id" required></label><br><br>
+        <button type="submit">Delete Task</button>
+    </form>
+
+    <div id="response" style="margin-top:20px;"></div>
+
+<script>
+const baseURL = "http://127.0.0.1:8000/tasks/api";
+
+const form = document.getElementById("deleteTaskForm");
+
+form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const taskId = form.task_id.value;
+
+    const res = await fetch(`${baseURL}/${taskId}`, {
+        method: "DELETE",
+    });
+
+    const responseDiv = document.getElementById("response");
+
+    if(res.ok){
+        const data = await res.json();
+        responseDiv.innerHTML = `<p>${data.message}</p>`;
+        form.reset();
+    } else {
+        const err = await res.json();
+        responseDiv.innerHTML = `<p>Error: ${err.detail || "Failed to delete task"}</p>`;
+    }
+});
+</script>
+
+</body>
+</html>

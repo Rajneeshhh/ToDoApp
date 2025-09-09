@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ToDo Tasks</title>
+</head>
+<body>
+    <h1>All Tasks</h1>
+    <table border="1" cellpadding="5">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Due Date</th>
+            </tr>
+        </thead>
+        <tbody id="tasksTable">
+        </tbody>
+    </table>
+
+    <hr>
+
+    <h2>Get Task By ID</h2>
+    <form id="getTaskForm">
+        <label>Task ID: <input type="number" name="task_id" required></label>
+        <button type="submit">Get Task</button>
+    </form>
+
+    <div id="taskDetails" style="margin-top:20px;"></div>
+
+<script>
+const baseURL = "http://127.0.0.1:8000/tasks/api";
+
+async function fetchTasks() {
+    const res = await fetch(baseURL + '/');
+    const tasks = await res.json();
+
+    const tbody = document.getElementById('tasksTable');
+    tbody.innerHTML = "";
+    tasks.forEach(task => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${task.task_id}</td>
+            <td>${task.title}</td>
+            <td>${task.status}</td>
+            <td>${task.priority}</td>
+            <td>${task.due_date || ''}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+const form = document.getElementById('getTaskForm');
+form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const taskId = form.task_id.value;
+    const res = await fetch(`${baseURL}/${taskId}`);
+    const detailsDiv = document.getElementById('taskDetails');
+
+    if(res.ok){
+        const task = await res.json();
+        detailsDiv.innerHTML = `
+            <h3>Task Details:</h3>
+            <p>ID: ${task.task_id}</p>
+            <p>Title: ${task.title}</p>
+            <p>Description: ${task.description || ''}</p>
+            <p>Status: ${task.status}</p>
+            <p>Priority: ${task.priority}</p>
+            <p>Due Date: ${task.due_date || ''}</p>
+        `;
+    } else {
+        detailsDiv.innerHTML = "<p>Task not found</p>";
+    }
+});
+
+fetchTasks();
+</script>
+
+</body>
+</html>
