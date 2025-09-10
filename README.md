@@ -3,16 +3,21 @@ To-Do List App
 Project Setup
 
 Step 1: Create and Activate Virtual Environment
+
 python -m venv env
+
 source env/bin/activate
 
 Step 2: Install Dependencies
+
 pip install -r requirements.txt
 
 Step 3: Initialize Database
+
 python -m core.db
 
 Step 4: Run the Application
+
 uvicorn app:app --reload
 
 This will start the server, and the application will be available at `http://localhost:8000`.
