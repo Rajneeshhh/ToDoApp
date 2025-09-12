@@ -1,12 +1,20 @@
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, Body
 from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.db import get_session
 from core import queries
+from core.models import User
 from schemas import TaskCreate, TaskUpdate, TaskOut
 from fastapi.templating import Jinja2Templates
 from utils.logger import logger
 from typing import List
+from fastapi.security import OAuth2PasswordBearer
+from schemas import Token, UserCreate, UserLogin
+from auth import create_access_token, create_refresh_token, verify_token
+from core.db import get_session
+
+router = APIRouter()
 
 
 router = APIRouter()
@@ -126,3 +134,57 @@ async def update_task_page(request: Request):
 @router.get("/delete", response_class=HTMLResponse)
 async def delete_task_page(request: Request):
     return templates.TemplateResponse("delete.html", {"request": request})
+
+
+
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+@router.post("/register", response_model=Token)
+async def register(user: UserCreate, session: AsyncSession = Depends(get_session)):
+    # Check if user exists
+    result = await session.execute(select(User).filter_by(username=user.username))
+    existing_user = result.scalars().first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username already exists")
+
+    # Create new user
+    new_user = User(username=user.username, password=user.password)
+    session.add(new_user)
+    await session.commit()
+    await session.refresh(new_user)  # fetch back from DB
+
+    access_token = create_access_token({"sub": new_user.username})
+    refresh_token = create_refresh_token({"sub": new_user.username})
+    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+
+
+
+@router.post("/login", response_model=Token)
+async def login(user: UserLogin, session: AsyncSession = Depends(get_session)):
+    result = await session.execute(
+        text("SELECT * FROM users WHERE username=:username AND password=:password"),
+        {"username": user.username, "password": user.password}
+    )
+    db_user = result.fetchone()
+    if not db_user:
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+
+    access_token = create_access_token({"sub": user.username})
+    refresh_token = create_refresh_token({"sub": user.username})
+    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+
+
+@router.post("/refresh", response_model=Token)
+async def refresh(refresh_token: str = Body(...)):
+    username = verify_token(refresh_token)
+    access_token = create_access_token({"sub": username})
+    new_refresh_token = create_refresh_token({"sub": username})
+    return {"access_token": access_token, "refresh_token": new_refresh_token, "token_type": "bearer"}
+
+
+@router.get("/protected")
+async def protected(token: str = Depends(oauth2_scheme)):
+    username = verify_token(token)
+    return {"message": f"Hello {username}, you are authorized!"}

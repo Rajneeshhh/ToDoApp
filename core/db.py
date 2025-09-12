@@ -42,6 +42,23 @@ async def init_db():
             )
         )
 
+async def init_users_table():
+    """Initialization of users table."""
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+        )
+
+
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency that provides an async DB session."""
     async with AsyncSessionLocal() as session:
@@ -50,4 +67,4 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(init_db())
+    asyncio.run(init_users_table())
